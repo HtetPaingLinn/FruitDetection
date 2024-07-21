@@ -3,7 +3,22 @@ import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
 import numpy as np
-import urllib.request
+from streamlit_webrtc import webrtc_streamer, VideoProcessorBase, VideoFrame
+
+# Define a video processor class for the YOLO model
+class YOLOVideoProcessor(VideoProcessorBase):
+    def __init__(self, model):
+        self.model = model
+
+    def recv(self, frame: VideoFrame) -> VideoFrame:
+        img = frame.to_ndarray(format="bgr24")
+
+        # Run YOLOv8 tracking on the frame
+        results = self.model.track(img, persist=True)
+        annotated_frame = results[0].plot()
+        annotated_array = np.array(annotated_frame)
+
+        return VideoFrame.from_ndarray(annotated_array, format="bgr24")
 
 def main():
     st.title("Fruit Tracking and Inspection")
@@ -30,40 +45,12 @@ def main():
     st.sidebar.info(f"Selected Fruit: {selected_fruit}")
     st.sidebar.info("This app uses YOLOv8 to track and inspect fruits in real-time.")
 
-    # Placeholder for video display
-    video_placeholder = st.empty()
-    
-    tracking = st.button("Start Tracking")
-    stop_tracking = st.button("Stop Tracking")
-
-    if tracking:
-        # Open the laptop camera
-        cap = cv2.VideoCapture(0)
-
-        # Loop through the camera frames
-        while tracking:
-            # Read a frame from the camera
-            success, frame = cap.read()
-            if not success:
-                st.warning("Unable to capture video. Please check your camera.")
-                break
-
-            # Run YOLOv8 tracking on the frame, persisting tracks between frames
-            results = model.track(frame, persist=True)
-            annotated_frame = results[0].plot()
-            annotated_array = np.array(annotated_frame)
-
-            # Display the annotated frame in the main area
-            video_placeholder.image(annotated_array, channels="BGR")
-
-            # Check if the stop button was pressed
-            if stop_tracking:
-                break
-
-        # Release the video capture object
-        cap.release()
-        st.success("Tracking stopped")
+    # Create a video streamer using streamlit-webrtc
+    webrtc_ctx = webrtc_streamer(
+        key="example",
+        video_processor_factory=lambda: YOLOVideoProcessor(model),
+        media_stream_constraints={"video": True, "audio": False},
+    )
 
 if __name__ == "__main__":
     main()
-
