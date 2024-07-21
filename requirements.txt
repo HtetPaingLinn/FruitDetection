@@ -1,10 +1,9 @@
 streamlit==1.21.0
 opencv-python-headless==4.8.0.74
 Pillow==9.5.0
-ultralytics==8.0.62
+ultralytics
 numpy==1.23.5
 blinker==1.6.2
-torch==2.0.1
-pip install git+https://github.com/ultralytics/ultralytics.git
-pip install ultralytics
+torch
+
 
